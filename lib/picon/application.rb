@@ -5,22 +5,43 @@ require 'syslog/logger'
 
 module Picon
   class Application < Sinatra::Base
+    set :public_folder, File.join(ROOT_DIR, 'www')
+
     def initialize
       super
       @logger = Syslog::Logger.new('picon')
     end
 
+    before do
+      @message = {request:{path: request.path}, response:{}}
+      @status = 200
+      @type = :json
+    end
+
+    after do
+      @message[:request][:params] = params
+      @message[:response][:status] = @status
+      @message[:response][:type] = @type
+      if (@status < 300)
+        @logger.info(json(@message))
+      else
+        @logger.error(json(@message))
+      end
+      content_type @type
+      status @status
+    end
+
     get '/convert' do
       unless params['path']
-        @logger.error(json({error: 'pathが未指定です。'}))
-        status 404
-        return
+        @status = 400
+        @message[:error] = 'pathが未指定です。'
+        return json(@message)
       end
 
       unless File.exist?(params['path'])
-        @logger.error(json({error: "#{params['path']}が見つかりません。"}))
-        status 404
-        return
+        @status = 404
+        @message[:error] = "#{params['path']}が見つかりません。"
+        return json(@message)
       end
 
       params['pixel'] ||= 100
@@ -45,26 +66,25 @@ module Picon
           image.write(dest)
           @logger.info(json({writtern: dest}))
         rescue => e
-          data = {status: 400, message: e.message}.merge(params)
-          @logger.error(json(data))
-          status 400
-          return json(data)
+          @status = 400
+          @message[:error] = e.message
+          return json(@message)
         end
       end
 
-      @logger.info(json({sent: File.basename(dest)}))
-      content_type :png
+      @message[:response][:sent] = File.basename(dest)
+      @type = :png
       return File.read(dest)
     end
 
     not_found do
-      status 404
-      return json({status: 404})
+      @status = 404
+      return json(@message)
     end
 
     error do
-      status 500
-      return json({status: 500})
+      @status = 500
+      return json(@message)
     end
   end
 end
