@@ -1,3 +1,4 @@
+require 'yaml'
 require 'rmagick'
 require 'sinatra/json'
 require 'digest/sha1'
@@ -9,7 +10,16 @@ module Picon
 
     def initialize
       super
-      @logger = Syslog::Logger.new('picon')
+      @config = YAML.load_file(File.join(ROOT_DIR, 'config/picon.yaml'))
+      @config['thin'] = YAML.load_file(File.join(ROOT_DIR, 'config/thin.yaml'))
+      @logger = Syslog::Logger.new(@config['application']['name'])
+      @logger.info(
+        'starting %s %s (port %d)'%([
+          @config['application']['name'],
+          @config['application']['version'],
+          @config['thin']['port'],
+        ])
+      )
     end
 
     before do
