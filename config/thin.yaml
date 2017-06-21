@@ -1,4 +1,5 @@
 timeout: 30
 environment: production
 daemonize: true
+quiet: true
 rackup: config.ru
