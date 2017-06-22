@@ -54,24 +54,27 @@ module Picon
         return json(@message)
       end
 
-      params['pixel'] ||= 100
+      params['width'] ||= 100
+      params['height'] ||= 100
       params['background_color'] ||= 'white'
       digest = Digest::SHA1.hexdigest([
         File.read(params['path']),
-        params['pixel'],
+        params['width'],
+        params['height'],
         params['background_color'],
       ].join(':'))
       dest = File.join(ROOT_DIR, "images/#{digest}.png")
 
       unless File.exist?(dest)
         begin
-          pixel = params['pixel'].to_i
+          width = params['width'].to_i
+          height = params['height'].to_i
           color = params['background_color']
-          image = Magick::Image.new(pixel, pixel) do
+          image = Magick::Image.new(width, height) do
             self.background_color = color
           end
           image.composite!(
-            Magick::Image.read(params['path']).first.resize_to_fit(pixel, pixel),
+            Magick::Image.read(params['path']).first.resize_to_fit(width, height),
             Magick::CenterGravity,
             Magick::OverCompositeOp
           )
