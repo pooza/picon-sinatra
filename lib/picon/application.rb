@@ -66,10 +66,12 @@ module Picon
       unless File.exist?(dest)
         begin
           pixel = params['pixel'].to_i
-          image = Magick::Image.new(pixel, pixel)
-          image.background_color = params['background_color']
+          color = params['background_color']
+          image = Magick::Image.new(pixel, pixel) do
+            self.background_color = color
+          end
           image.composite!(
-            Magick::Image.read(params['path']).first.resize_to_fit(pixel),
+            Magick::Image.read(params['path']).first.resize_to_fit(pixel, pixel),
             Magick::CenterGravity,
             Magick::OverCompositeOp
           )

@@ -1,6 +1,6 @@
 application:
   name: picon-sinatra
-  version: 0.1.0
+  version: 0.1.1
 author:
   name: pooza
   email: tkoishi@b-shock.co.jp
