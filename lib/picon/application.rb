@@ -13,13 +13,16 @@ module Picon
       @config = YAML.load_file(File.join(ROOT_DIR, 'config/picon.yaml'))
       @config['thin'] = YAML.load_file(File.join(ROOT_DIR, 'config/thin.yaml'))
       @logger = Syslog::Logger.new(@config['application']['name'])
-      @logger.info(
-        'starting %s %s (port %d)'%([
-          @config['application']['name'],
-          @config['application']['version'],
-          @config['thin']['port'],
-        ])
-      )
+      @logger.info({
+        message: 'starting...',
+        package: {
+          name: @config['application']['name'],
+          version: @config['application']['version'],
+        },
+        server: {
+          port: @config['thin']['port'],
+        },
+      })
     end
 
     before do
