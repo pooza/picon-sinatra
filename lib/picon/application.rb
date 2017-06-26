@@ -29,7 +29,7 @@ module Picon
     end
 
     after do
-      @message[:request][:params] = params
+      @message[:request][:params] = params.to_h
       @message[:response][:status] = @status
       @message[:response][:type] = @type
       if (@status < 300)
@@ -41,43 +41,64 @@ module Picon
       status @status
     end
 
-    get '/convert' do
-      unless params['path']
-        @status = 400
-        @message[:error] = 'pathが未指定です。'
-        return json(@message)
-      end
-
-      unless File.exist?(params['path'])
-        @status = 404
-        @message[:error] = "#{params['path']}が見つかりません。"
-        return json(@message)
-      end
-
-      params['width'] ||= 100
-      params['height'] ||= 100
-      params['background_color'] ||= 'white'
+    post '/resize' do
+      params[:width] ||= 100
+      params[:height] ||= 100
+      params[:cackground_color] ||= 'white'
       digest = Digest::SHA1.hexdigest([
-        File.read(params['path']),
-        params['width'],
-        params['height'],
-        params['background_color'],
+        '/resize',
+        File.read(params[:file][:tempfile]),
+        params[:width],
+        params[:height],
+        params[:cackground_color],
       ].join(':'))
       dest = File.join(ROOT_DIR, "images/#{digest}.png")
 
       unless File.exist?(dest)
         begin
-          width = params['width'].to_i
-          height = params['height'].to_i
-          color = params['background_color']
-          image = Magick::Image.new(width, height) do
+          width = params[:width].to_i
+          height = params[:height].to_i
+          color = params[:cackground_color]
+          constant image = Magick::Image.new(width, height) do
             self.background_color = color
           end
           image.composite!(
-            Magick::Image.read(params['path']).first.resize_to_fit(width, height),
+            Magick::Image.from_blob(
+              File.read([:file][:tempfile])
+            ).first.resize_to_fit(width, height),
             Magick::CenterGravity,
             Magick::OverCompositeOp
           )
+          image.write(dest)
+          @logger.info(json({writtern: dest}))
+        rescue => e
+          @status = 400
+          @message[:error] = e.message
+          return json(@message)
+        end
+      end
+
+      @message[:response][:sent] = File.basename(dest)
+      @type = :png
+      return File.read(dest)
+    end
+
+    post '/resize_width' do
+      params[:width] ||= 100
+      digest = Digest::SHA1.hexdigest([
+        '/resize_width',
+        File.read(params[:file][:tempfile]),
+        params[:width],
+      ].join(':'))
+      dest = File.join(ROOT_DIR, "images/#{digest}.png")
+
+      unless File.exist?(dest)
+        begin
+          width = params[:width].to_i
+          image = Magick::Image.from_blob(
+            File.read(params[:file][:tempfile])
+          ).first
+          image.resize!(width, image.rows * width / image.columns)
           image.write(dest)
           @logger.info(json({writtern: dest}))
         rescue => e
