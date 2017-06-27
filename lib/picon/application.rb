@@ -87,10 +87,12 @@ module Picon
     end
 
     post '/resize_width' do
+      params[:method] ||= 'resize'
       params[:width] ||= 100
       digest = Digest::SHA1.hexdigest([
         '/resize_width',
         File.read(params[:file][:tempfile]),
+        params[:method],
         params[:width],
       ].join(':'))
       dest = File.join(ROOT_DIR, "images/#{digest}.png")
@@ -101,7 +103,7 @@ module Picon
           image = Magick::Image.from_blob(
             File.read(params[:file][:tempfile])
           ).first
-          image.resize!(width, image.rows * width / image.columns)
+          image.send("#{params['method']}!", width, image.rows * width / image.columns)
           image.write(dest)
           @logger.info(json({writtern: dest}))
         rescue => e
