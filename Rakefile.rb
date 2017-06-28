@@ -4,9 +4,13 @@ ENV['BUNDLE_GEMFILE'] ||= File.join(ROOT_DIR, 'Gemfile')
 
 require 'bundler/setup'
 
+[:start, :stop, :restart].each do |action|
+  desc "#{action} thin"
+  task action => ["server:#{action}"]
+end
+
 namespace :server do
   [:start, :stop, :restart].each do |action|
-    desc "#{action} thin"
     task action do
       sh "thin --config config/thin.yaml #{action}"
     end
